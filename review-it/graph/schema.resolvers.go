@@ -11,6 +11,7 @@ import (
 	"github.com/DeepAung/apiplustech-training/review-it/graph/model"
 )
 
+// MovieCreate is the resolver for the movieCreate field.
 func (r *mutationResolver) MovieCreate(ctx context.Context, input model.MovieInput) (*model.Movie, error) {
 	if input.ID != nil {
 		return nil, fmt.Errorf("id must be null")
@@ -28,6 +29,7 @@ func (r *mutationResolver) MovieCreate(ctx context.Context, input model.MovieInp
 	return &newMovie, nil
 }
 
+// MovieUpdate is the resolver for the movieUpdate field.
 func (r *mutationResolver) MovieUpdate(ctx context.Context, input model.MovieInput) (*model.Movie, error) {
 	if input.ID == nil {
 		return nil, fmt.Errorf("id must not be null")
@@ -48,6 +50,7 @@ func (r *mutationResolver) MovieUpdate(ctx context.Context, input model.MovieInp
 	return &movie, nil
 }
 
+// MovieDelete is the resolver for the movieDelete field.
 func (r *mutationResolver) MovieDelete(ctx context.Context, id string) (bool, error) {
 	err := r.DB.DeleteMovie(id)
 	if err != nil {
@@ -57,6 +60,7 @@ func (r *mutationResolver) MovieDelete(ctx context.Context, id string) (bool, er
 	return true, nil
 }
 
+// MovieAddReviews is the resolver for the movieAddReviews field.
 func (r *mutationResolver) MovieAddReviews(ctx context.Context, movieID string, reviews []*model.ReviewInput) (*model.Movie, error) {
 	movie, err := r.DB.FindMovieByID(movieID)
 	if err != nil {
@@ -78,6 +82,7 @@ func (r *mutationResolver) MovieAddReviews(ctx context.Context, movieID string, 
 	return movie, nil
 }
 
+// MovieRemoveReviews is the resolver for the movieRemoveReviews field.
 func (r *mutationResolver) MovieRemoveReviews(ctx context.Context, movieID string, reviewIds []string) (*model.Movie, error) {
 	movie, err := r.DB.FindMovieByID(movieID)
 	if err != nil {
@@ -106,18 +111,22 @@ func (r *mutationResolver) MovieRemoveReviews(ctx context.Context, movieID strin
 	return movie, nil
 }
 
+// Movie is the resolver for the movie field.
 func (r *queryResolver) Movie(ctx context.Context, id string) (*model.Movie, error) {
 	return r.DB.FindMovieByID(id)
 }
 
+// Movies is the resolver for the movies field.
 func (r *queryResolver) Movies(ctx context.Context) ([]*model.Movie, error) {
 	return r.DB.FindAllMovies(), nil
 }
 
+// Review is the resolver for the review field.
 func (r *queryResolver) Review(ctx context.Context, id string) (*model.Review, error) {
 	return r.DB.FindReviewByID(id)
 }
 
+// Reviews is the resolver for the reviews field.
 func (r *queryResolver) Reviews(ctx context.Context) ([]*model.Review, error) {
 	return r.DB.FindAllReviews(), nil
 }
@@ -128,7 +137,5 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
-type (
-	mutationResolver struct{ *Resolver }
-	queryResolver    struct{ *Resolver }
-)
+type mutationResolver struct{ *Resolver }
+type queryResolver struct{ *Resolver }
