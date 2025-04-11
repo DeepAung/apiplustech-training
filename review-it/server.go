@@ -25,7 +25,7 @@ func main() {
 		}}),
 	)
 
-	r.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	r.Handle("/", playground.ApolloSandboxHandler("GraphQL playground", "/query"))
 	r.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/ for GraphQL playground", defaultPort)
