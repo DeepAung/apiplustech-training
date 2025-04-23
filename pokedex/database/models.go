@@ -5,7 +5,7 @@
 package database
 
 type Pokemon struct {
-	ID          interface{}
+	ID          int64
 	Name        string
 	Description string
 	Category    string

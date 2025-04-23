@@ -47,7 +47,7 @@ const deletePokemon = `-- name: DeletePokemon :exec
 DELETE FROM pokemons WHERE id = ?
 `
 
-func (q *Queries) DeletePokemon(ctx context.Context, id interface{}) error {
+func (q *Queries) DeletePokemon(ctx context.Context, id int64) error {
 	_, err := q.db.ExecContext(ctx, deletePokemon, id)
 	return err
 }
@@ -56,7 +56,7 @@ const getPokemonByID = `-- name: GetPokemonByID :one
 SELECT id, name, description, category, types, abilities FROM pokemons WHERE id = ? LIMIT 1
 `
 
-func (q *Queries) GetPokemonByID(ctx context.Context, id interface{}) (Pokemon, error) {
+func (q *Queries) GetPokemonByID(ctx context.Context, id int64) (Pokemon, error) {
 	row := q.db.QueryRowContext(ctx, getPokemonByID, id)
 	var i Pokemon
 	err := row.Scan(
@@ -135,7 +135,7 @@ type UpdatePokemonParams struct {
 	Category    string
 	Types       string
 	Abilities   string
-	ID          interface{}
+	ID          int64
 }
 
 func (q *Queries) UpdatePokemon(ctx context.Context, arg UpdatePokemonParams) (Pokemon, error) {
