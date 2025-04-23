@@ -17,12 +17,12 @@ import (
 func (r *mutationResolver) CreatePokemon(ctx context.Context, input model.PokemonInput) (*model.Pokemon, error) {
 	types, err := json.Marshal(&input.Types)
 	if err != nil {
-		return nil, err
+		return nil, InvalidJsonFieldError("types")
 	}
 
 	abilities, err := json.Marshal(&input.Abilities)
 	if err != nil {
-		return nil, err
+		return nil, InvalidJsonFieldError("abilities")
 	}
 
 	result, err := r.queries.CreatePokemon(ctx, database.CreatePokemonParams{
@@ -43,17 +43,17 @@ func (r *mutationResolver) CreatePokemon(ctx context.Context, input model.Pokemo
 func (r *mutationResolver) UpdatePokemon(ctx context.Context, id string, input model.PokemonInput) (*model.Pokemon, error) {
 	intId, err := strconv.Atoi(id)
 	if err != nil {
-		return nil, err
+		return nil, InvalidIntError
 	}
 
 	types, err := json.Marshal(&input.Types)
 	if err != nil {
-		return nil, err
+		return nil, InvalidJsonFieldError("types")
 	}
 
 	abilities, err := json.Marshal(&input.Abilities)
 	if err != nil {
-		return nil, err
+		return nil, InvalidJsonFieldError("abilities")
 	}
 
 	result, err := r.queries.UpdatePokemon(ctx, database.UpdatePokemonParams{
@@ -75,7 +75,7 @@ func (r *mutationResolver) UpdatePokemon(ctx context.Context, id string, input m
 func (r *mutationResolver) DeletePokemon(ctx context.Context, id string) (bool, error) {
 	intId, err := strconv.Atoi(id)
 	if err != nil {
-		return false, err
+		return false, InvalidIntError
 	}
 
 	err = r.queries.DeletePokemon(ctx, int64(intId))
@@ -104,7 +104,7 @@ func (r *queryResolver) Pokemons(ctx context.Context) ([]*model.Pokemon, error) 
 func (r *queryResolver) PokemonByID(ctx context.Context, id string) (*model.Pokemon, error) {
 	intId, err := strconv.Atoi(id)
 	if err != nil {
-		return nil, err
+		return nil, InvalidIntError
 	}
 
 	result, err := r.queries.GetPokemonByID(ctx, int64(intId))

@@ -4,6 +4,7 @@ package graph
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/DeepAung/apiplustech-training/pokedex/database"
@@ -13,6 +14,13 @@ import (
 // This file will not be regenerated automatically.
 //
 // It serves as dependency injection for your app, add any dependencies you require here.
+
+var (
+	InvalidIntError       = errors.New("invalid integer")
+	InvalidJsonFieldError = func(field string) error {
+		return errors.New(fmt.Sprintf("invalid json field %q", field))
+	}
+)
 
 type Resolver struct {
 	queries *database.Queries
@@ -27,12 +35,12 @@ func NewResolver(queries *database.Queries) *Resolver {
 func (r *Resolver) convertPokemonDBToGraphql(pokemon *database.Pokemon) (*model.Pokemon, error) {
 	var types []model.PokemonType
 	if err := json.Unmarshal([]byte(pokemon.Types), &types); err != nil {
-		return nil, err
+		return nil, InvalidJsonFieldError("types")
 	}
 
 	var abilities []string
 	if err := json.Unmarshal([]byte(pokemon.Abilities), &abilities); err != nil {
-		return nil, err
+		return nil, InvalidJsonFieldError("abilities")
 	}
 
 	return &model.Pokemon{

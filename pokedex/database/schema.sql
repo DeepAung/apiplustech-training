@@ -6,7 +6,7 @@ DROP TRIGGER IF EXISTS validate_types_before_update;
 
 CREATE TABLE pokemons (
   id          integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name        text    NOT NULL,
+  name        text    NOT NULL UNIQUE,
   description text    NOT NULL DEFAULT '',
   category    text    NOT NULL DEFAULT '',
   types       text    NOT NULL DEFAULT '',
