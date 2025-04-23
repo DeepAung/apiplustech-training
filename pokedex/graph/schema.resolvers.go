@@ -6,39 +6,123 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
+	"strconv"
 
+	"github.com/DeepAung/apiplustech-training/pokedex/database"
 	"github.com/DeepAung/apiplustech-training/pokedex/graph/model"
 )
 
 // CreatePokemon is the resolver for the createPokemon field.
 func (r *mutationResolver) CreatePokemon(ctx context.Context, input model.PokemonInput) (*model.Pokemon, error) {
-	panic(fmt.Errorf("not implemented: CreatePokemon - createPokemon"))
+	types, err := json.Marshal(&input.Types)
+	if err != nil {
+		return nil, err
+	}
+
+	abilities, err := json.Marshal(&input.Abilities)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.queries.CreatePokemon(ctx, database.CreatePokemonParams{
+		Name:        input.Name,
+		Description: input.Description,
+		Category:    input.Category,
+		Types:       string(types),
+		Abilities:   string(abilities),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertPokemonDBToGraphql(&result)
 }
 
 // UpdatePokemon is the resolver for the updatePokemon field.
 func (r *mutationResolver) UpdatePokemon(ctx context.Context, id string, input model.PokemonInput) (*model.Pokemon, error) {
-	panic(fmt.Errorf("not implemented: UpdatePokemon - updatePokemon"))
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+
+	types, err := json.Marshal(&input.Types)
+	if err != nil {
+		return nil, err
+	}
+
+	abilities, err := json.Marshal(&input.Abilities)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.queries.UpdatePokemon(ctx, database.UpdatePokemonParams{
+		Name:        input.Name,
+		Description: input.Description,
+		Category:    input.Category,
+		Types:       string(types),
+		Abilities:   string(abilities),
+		ID:          int64(intId),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertPokemonDBToGraphql(&result)
 }
 
 // DeletePokemon is the resolver for the deletePokemon field.
 func (r *mutationResolver) DeletePokemon(ctx context.Context, id string) (bool, error) {
-	panic(fmt.Errorf("not implemented: DeletePokemon - deletePokemon"))
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		return false, err
+	}
+
+	err = r.queries.DeletePokemon(ctx, int64(intId))
+	return err == nil, err
 }
 
 // Pokemons is the resolver for the pokemons field.
 func (r *queryResolver) Pokemons(ctx context.Context) ([]*model.Pokemon, error) {
-	panic(fmt.Errorf("not implemented: Pokemons - pokemons"))
+	result, err := r.queries.ListPokemons(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	pokemons := make([]*model.Pokemon, len(result))
+	for i, item := range result {
+		pokemons[i], err = r.convertPokemonDBToGraphql(&item)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return pokemons, nil
 }
 
 // PokemonByID is the resolver for the pokemonByID field.
 func (r *queryResolver) PokemonByID(ctx context.Context, id string) (*model.Pokemon, error) {
-	panic(fmt.Errorf("not implemented: PokemonByID - pokemonByID"))
+	intId, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := r.queries.GetPokemonByID(ctx, int64(intId))
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertPokemonDBToGraphql(&result)
 }
 
 // PokemonByName is the resolver for the pokemonByName field.
 func (r *queryResolver) PokemonByName(ctx context.Context, name string) (*model.Pokemon, error) {
-	panic(fmt.Errorf("not implemented: PokemonByName - pokemonByName"))
+	result, err := r.queries.GetPokemonByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.convertPokemonDBToGraphql(&result)
 }
 
 // Mutation returns MutationResolver implementation.
@@ -47,5 +131,7 @@ func (r *Resolver) Mutation() MutationResolver { return &mutationResolver{r} }
 // Query returns QueryResolver implementation.
 func (r *Resolver) Query() QueryResolver { return &queryResolver{r} }
 
-type mutationResolver struct{ *Resolver }
-type queryResolver struct{ *Resolver }
+type (
+	mutationResolver struct{ *Resolver }
+	queryResolver    struct{ *Resolver }
+)
