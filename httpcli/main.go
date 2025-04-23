@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"slices"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -19,24 +18,29 @@ var (
 	jsonFlag    string
 )
 
-var subCommands = []string{
-	http.MethodGet,
-	// http.MethodHead,
-	http.MethodPost,
-	http.MethodPut,
-	http.MethodPatch,
-	http.MethodDelete,
-	// http.MethodConnect,
-	// http.MethodOptions,
-	// http.MethodTrace,
+// see more at http.MethodGet
+var methods = []string{
+	"get",
+	"post",
+	"put",
+	"patch",
+	"delete",
+	// "head",
+	// "connect",
+	// "options",
+	// "trace",
 }
 
+const rootMethod = "get"
+
 var rootCmd = &cobra.Command{
-	Use:   "httpcli",
-	Short: "httpcli is a httpcli!!!",
-	Long:  `httpcli is a httpcli!!!. nothing more i guess?`,
-	RunE:  runCommand,
+	Use:   "httpcli <url>",
+	Short: fmt.Sprintf("call http request with %s method", rootMethod),
+	Args:  cobra.ExactArgs(1),
+	RunE:  runCommandWithMethod(strings.ToUpper(rootMethod)),
 }
+
+var subCmds = []*cobra.Command{}
 
 func init() {
 	rootCmd.PersistentFlags().
@@ -45,6 +49,16 @@ func init() {
 		StringArrayVar(&queriesFlag, "query", nil, "query parameters of the request")
 	rootCmd.PersistentFlags().
 		StringVar(&jsonFlag, "json", "", "json body of the request")
+
+	for _, method := range methods {
+		subCmds = append(subCmds, &cobra.Command{
+			Use:   fmt.Sprintf("%s <url>", method),
+			Short: fmt.Sprintf("call http request with %s method", method),
+			Args:  cobra.ExactArgs(1),
+			RunE:  runCommandWithMethod(strings.ToUpper(method)),
+		})
+	}
+	rootCmd.AddCommand(subCmds...)
 }
 
 func main() {
@@ -56,58 +70,49 @@ func main() {
 
 // -------------------------------------------------------------------------- //
 
-func runCommand(cmd *cobra.Command, args []string) error {
-	method, url, err := parseArguments(args)
-	if err != nil {
-		return err
-	}
+func runCommandWithMethod(method string) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		// there should be no error. if it happen, just panic.
+		url := args[0]
 
-	req, err := constructHttpRequest(method, url, jsonFlag)
-	if err != nil {
-		return err
-	}
+		req, err := constructHttpRequest(method, url, jsonFlag)
+		if err != nil {
+			return err
+		}
 
-	if err = addHeaders(req, headersFlag); err != nil {
-		return err
-	}
+		if err = addHeaders(req, headersFlag); err != nil {
+			return err
+		}
 
-	if err = addQueries(req, queriesFlag); err != nil {
-		return err
-	}
+		if err = addQueries(req, queriesFlag); err != nil {
+			return err
+		}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
+		res, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
 
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			return err
+		}
+		cmd.Println(string(body))
+		return nil
 	}
-	cmd.Println(string(body))
-	return nil
 }
 
-func parseArguments(args []string) (method string, url string, err error) {
+func parseArguments(args []string) (url string, err error) {
 	switch len(args) {
 	case 0:
-		err = errors.New("requires at least one argument")
+		err = errors.New("requires exact one argument <url>")
 		return
 	case 1:
-		method = http.MethodGet
 		url = args[0]
 		return
-	case 2:
-		if !slices.Contains(subCommands, strings.ToUpper(args[0])) {
-			err = errors.New("invalid sub command")
-			return
-		}
-		method = strings.ToUpper(args[0])
-		url = args[1]
-		return
 	default:
-		err = errors.New("requires at most two arguments")
+		err = errors.New("requires exact one arguments <url>")
 		return
 	}
 }
