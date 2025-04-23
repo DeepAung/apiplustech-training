@@ -6,37 +6,14 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
 	"strconv"
 
-	"github.com/DeepAung/apiplustech-training/pokedex/database"
 	"github.com/DeepAung/apiplustech-training/pokedex/graph/model"
 )
 
 // CreatePokemon is the resolver for the createPokemon field.
 func (r *mutationResolver) CreatePokemon(ctx context.Context, input model.PokemonInput) (*model.Pokemon, error) {
-	types, err := json.Marshal(&input.Types)
-	if err != nil {
-		return nil, InvalidJsonFieldError("types")
-	}
-
-	abilities, err := json.Marshal(&input.Abilities)
-	if err != nil {
-		return nil, InvalidJsonFieldError("abilities")
-	}
-
-	result, err := r.queries.CreatePokemon(ctx, database.CreatePokemonParams{
-		Name:        input.Name,
-		Description: input.Description,
-		Category:    input.Category,
-		Types:       string(types),
-		Abilities:   string(abilities),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return r.convertPokemonDBToGraphql(&result)
+	return r.repo.CreatePokemon(ctx, input)
 }
 
 // UpdatePokemon is the resolver for the updatePokemon field.
@@ -46,29 +23,7 @@ func (r *mutationResolver) UpdatePokemon(ctx context.Context, id string, input m
 		return nil, InvalidIntError
 	}
 
-	types, err := json.Marshal(&input.Types)
-	if err != nil {
-		return nil, InvalidJsonFieldError("types")
-	}
-
-	abilities, err := json.Marshal(&input.Abilities)
-	if err != nil {
-		return nil, InvalidJsonFieldError("abilities")
-	}
-
-	result, err := r.queries.UpdatePokemon(ctx, database.UpdatePokemonParams{
-		Name:        input.Name,
-		Description: input.Description,
-		Category:    input.Category,
-		Types:       string(types),
-		Abilities:   string(abilities),
-		ID:          int64(intId),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return r.convertPokemonDBToGraphql(&result)
+	return r.repo.UpdatePokemon(ctx, int64(intId), input)
 }
 
 // DeletePokemon is the resolver for the deletePokemon field.
@@ -78,26 +33,12 @@ func (r *mutationResolver) DeletePokemon(ctx context.Context, id string) (bool, 
 		return false, InvalidIntError
 	}
 
-	err = r.queries.DeletePokemon(ctx, int64(intId))
-	return err == nil, err
+	return r.repo.DeletePokemon(ctx, int64(intId))
 }
 
 // Pokemons is the resolver for the pokemons field.
 func (r *queryResolver) Pokemons(ctx context.Context) ([]*model.Pokemon, error) {
-	result, err := r.queries.ListPokemons(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	pokemons := make([]*model.Pokemon, len(result))
-	for i, item := range result {
-		pokemons[i], err = r.convertPokemonDBToGraphql(&item)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return pokemons, nil
+	return r.repo.ListPokemons(ctx)
 }
 
 // PokemonByID is the resolver for the pokemonByID field.
@@ -107,22 +48,12 @@ func (r *queryResolver) PokemonByID(ctx context.Context, id string) (*model.Poke
 		return nil, InvalidIntError
 	}
 
-	result, err := r.queries.GetPokemonByID(ctx, int64(intId))
-	if err != nil {
-		return nil, err
-	}
-
-	return r.convertPokemonDBToGraphql(&result)
+	return r.repo.GetPokemonByID(ctx, int64(intId))
 }
 
 // PokemonByName is the resolver for the pokemonByName field.
 func (r *queryResolver) PokemonByName(ctx context.Context, name string) (*model.Pokemon, error) {
-	result, err := r.queries.GetPokemonByName(ctx, name)
-	if err != nil {
-		return nil, err
-	}
-
-	return r.convertPokemonDBToGraphql(&result)
+	return r.repo.GetPokemonByName(ctx, name)
 }
 
 // Mutation returns MutationResolver implementation.
