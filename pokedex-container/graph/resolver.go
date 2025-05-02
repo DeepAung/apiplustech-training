@@ -57,8 +57,8 @@ func (r *Repository) CreatePokemon(
 		Name:        input.Name,
 		Description: input.Description,
 		Category:    input.Category,
-		Types:       string(types),
-		Abilities:   string(abilities),
+		Types:       types,
+		Abilities:   abilities,
 	})
 	if err != nil {
 		return nil, err
@@ -69,7 +69,7 @@ func (r *Repository) CreatePokemon(
 
 func (r *Repository) UpdatePokemon(
 	ctx context.Context,
-	id int64,
+	id int32,
 	input model.PokemonInput,
 ) (*model.Pokemon, error) {
 	types, err := json.Marshal(&input.Types)
@@ -86,8 +86,8 @@ func (r *Repository) UpdatePokemon(
 		Name:        input.Name,
 		Description: input.Description,
 		Category:    input.Category,
-		Types:       string(types),
-		Abilities:   string(abilities),
+		Types:       types,
+		Abilities:   abilities,
 		ID:          id,
 	})
 	if err != nil {
@@ -97,7 +97,7 @@ func (r *Repository) UpdatePokemon(
 	return r.convertPokemonDBToGraphql(&result)
 }
 
-func (r *Repository) DeletePokemon(ctx context.Context, id int64) (bool, error) {
+func (r *Repository) DeletePokemon(ctx context.Context, id int32) (bool, error) {
 	err := r.queries.DeletePokemon(ctx, id)
 	return err == nil, err
 }
@@ -119,7 +119,7 @@ func (r *Repository) ListPokemons(ctx context.Context) ([]*model.Pokemon, error)
 	return pokemons, nil
 }
 
-func (r *Repository) GetPokemonByID(ctx context.Context, id int64) (*model.Pokemon, error) {
+func (r *Repository) GetPokemonByID(ctx context.Context, id int32) (*model.Pokemon, error) {
 	result, err := r.queries.GetPokemonByID(ctx, id)
 	if err != nil {
 		return nil, err

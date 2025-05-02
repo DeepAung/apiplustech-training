@@ -5,10 +5,10 @@
 package database
 
 type Pokemon struct {
-	ID          int64
+	ID          int32
 	Name        string
 	Description string
 	Category    string
-	Types       string
-	Abilities   string
+	Types       []byte
+	Abilities   []byte
 }

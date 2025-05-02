@@ -1,50 +1,45 @@
 DROP TABLE IF EXISTS pokemons;
-DROP TRIGGER IF EXISTS validate_types_before_insert;
-DROP TRIGGER IF EXISTS validate_types_before_update;
+DROP FUNCTION IF EXISTS validate_pokemon_types;
+DROP TRIGGER IF EXISTS validate_types_before_insert ON pokemons;
+DROP TRIGGER IF EXISTS validate_types_before_update ON pokemons;
 
 -------------------------------------------------------------------------------
 
 CREATE TABLE pokemons (
-  id          integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-  name        text    NOT NULL UNIQUE,
-  description text    NOT NULL DEFAULT '',
-  category    text    NOT NULL DEFAULT '',
-  types       text    NOT NULL DEFAULT '',
-  abilities   text    NOT NULL DEFAULT ''
+  id          SERIAL  NOT NULL,
+  name        TEXT    NOT NULL UNIQUE,
+  description TEXT    NOT NULL DEFAULT '',
+  category    TEXT    NOT NULL DEFAULT '',
+  types       JSONB   NOT NULL DEFAULT '[]',
+  abilities   JSONB   NOT NULL DEFAULT '[]'
 );
+
+CREATE OR REPLACE FUNCTION validate_pokemon_types()
+RETURNS TRIGGER AS $$
+DECLARE
+  type_value TEXT;
+BEGIN
+  FOR type_value IN SELECT jsonb_array_elements_text(NEW.types)
+  LOOP
+    IF type_value NOT IN (
+      'BUG', 'DRAGON', 'FAIRY', 'FIRE', 'GHOST', 'GROUND', 'NORMAL',
+      'PSYCHIC', 'STEEL', 'DARK', 'ELECTRIC', 'FIGHTING', 'FLYING',
+      'GRASS', 'ICE', 'POISON', 'ROCK', 'WATER'
+    ) THEN
+      RAISE EXCEPTION 'Invalid type in types array: %', type_value;
+    END IF;
+  END LOOP;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE TRIGGER validate_types_before_insert
 BEFORE INSERT ON pokemons
-BEGIN
-  SELECT 
-    CASE
-      WHEN EXISTS (
-        SELECT value
-        FROM json_each(NEW.types)
-        WHERE value NOT IN (
-          'BUG', 'DRAGON', 'FAIRY', 'FIRE', 'GHOST', 'GROUND', 'NORMAL', 
-          'PSYCHIC', 'STEEL', 'DARK', 'ELECTRIC', 'FIGHTING', 'FLYING', 
-          'GRASS', 'ICE', 'POISON', 'ROCK', 'WATER'
-        )
-      )
-      THEN RAISE(ABORT, 'Invalid type in types array')
-    END;
-END;
+FOR EACH ROW
+EXECUTE FUNCTION validate_pokemon_types();
 
 CREATE TRIGGER validate_types_before_update
 BEFORE UPDATE ON pokemons
-BEGIN
-  SELECT 
-    CASE
-      WHEN EXISTS (
-        SELECT value
-        FROM json_each(NEW.types)
-        WHERE value NOT IN (
-          'BUG', 'DRAGON', 'FAIRY', 'FIRE', 'GHOST', 'GROUND', 'NORMAL', 
-          'PSYCHIC', 'STEEL', 'DARK', 'ELECTRIC', 'FIGHTING', 'FLYING', 
-          'GRASS', 'ICE', 'POISON', 'ROCK', 'WATER'
-        )
-      )
-      THEN RAISE(ABORT, 'Invalid type in types array')
-    END;
-END;
+FOR EACH ROW
+EXECUTE FUNCTION validate_pokemon_types();

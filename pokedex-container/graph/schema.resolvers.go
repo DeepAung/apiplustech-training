@@ -23,7 +23,7 @@ func (r *mutationResolver) UpdatePokemon(ctx context.Context, id string, input m
 		return nil, InvalidIntError
 	}
 
-	return r.repo.UpdatePokemon(ctx, int64(intId), input)
+	return r.repo.UpdatePokemon(ctx, int32(intId), input)
 }
 
 // DeletePokemon is the resolver for the deletePokemon field.
@@ -33,7 +33,7 @@ func (r *mutationResolver) DeletePokemon(ctx context.Context, id string) (bool, 
 		return false, InvalidIntError
 	}
 
-	return r.repo.DeletePokemon(ctx, int64(intId))
+	return r.repo.DeletePokemon(ctx, int32(intId))
 }
 
 // Pokemons is the resolver for the pokemons field.
@@ -48,7 +48,7 @@ func (r *queryResolver) PokemonByID(ctx context.Context, id string) (*model.Poke
 		return nil, InvalidIntError
 	}
 
-	return r.repo.GetPokemonByID(ctx, int64(intId))
+	return r.repo.GetPokemonByID(ctx, int32(intId))
 }
 
 // PokemonByName is the resolver for the pokemonByName field.

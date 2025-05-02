@@ -11,7 +11,7 @@ import (
 
 const createPokemon = `-- name: CreatePokemon :one
 INSERT INTO pokemons (name, description, category, types, abilities)
-VALUES (?, ?, ?, ?, ?)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id, name, description, category, types, abilities
 `
 
@@ -19,12 +19,12 @@ type CreatePokemonParams struct {
 	Name        string
 	Description string
 	Category    string
-	Types       string
-	Abilities   string
+	Types       []byte
+	Abilities   []byte
 }
 
 func (q *Queries) CreatePokemon(ctx context.Context, arg CreatePokemonParams) (Pokemon, error) {
-	row := q.db.QueryRowContext(ctx, createPokemon,
+	row := q.db.QueryRow(ctx, createPokemon,
 		arg.Name,
 		arg.Description,
 		arg.Category,
@@ -44,20 +44,20 @@ func (q *Queries) CreatePokemon(ctx context.Context, arg CreatePokemonParams) (P
 }
 
 const deletePokemon = `-- name: DeletePokemon :exec
-DELETE FROM pokemons WHERE id = ?
+DELETE FROM pokemons WHERE id = $1
 `
 
-func (q *Queries) DeletePokemon(ctx context.Context, id int64) error {
-	_, err := q.db.ExecContext(ctx, deletePokemon, id)
+func (q *Queries) DeletePokemon(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deletePokemon, id)
 	return err
 }
 
 const getPokemonByID = `-- name: GetPokemonByID :one
-SELECT id, name, description, category, types, abilities FROM pokemons WHERE id = ? LIMIT 1
+SELECT id, name, description, category, types, abilities FROM pokemons WHERE id = $1 LIMIT 1
 `
 
-func (q *Queries) GetPokemonByID(ctx context.Context, id int64) (Pokemon, error) {
-	row := q.db.QueryRowContext(ctx, getPokemonByID, id)
+func (q *Queries) GetPokemonByID(ctx context.Context, id int32) (Pokemon, error) {
+	row := q.db.QueryRow(ctx, getPokemonByID, id)
 	var i Pokemon
 	err := row.Scan(
 		&i.ID,
@@ -71,11 +71,11 @@ func (q *Queries) GetPokemonByID(ctx context.Context, id int64) (Pokemon, error)
 }
 
 const getPokemonByName = `-- name: GetPokemonByName :one
-SELECT id, name, description, category, types, abilities FROM pokemons WHERE name = ? LIMIT 1
+SELECT id, name, description, category, types, abilities FROM pokemons WHERE name = $1 LIMIT 1
 `
 
 func (q *Queries) GetPokemonByName(ctx context.Context, name string) (Pokemon, error) {
-	row := q.db.QueryRowContext(ctx, getPokemonByName, name)
+	row := q.db.QueryRow(ctx, getPokemonByName, name)
 	var i Pokemon
 	err := row.Scan(
 		&i.ID,
@@ -93,7 +93,7 @@ SELECT id, name, description, category, types, abilities FROM pokemons
 `
 
 func (q *Queries) ListPokemons(ctx context.Context) ([]Pokemon, error) {
-	rows, err := q.db.QueryContext(ctx, listPokemons)
+	rows, err := q.db.Query(ctx, listPokemons)
 	if err != nil {
 		return nil, err
 	}
@@ -113,9 +113,6 @@ func (q *Queries) ListPokemons(ctx context.Context) ([]Pokemon, error) {
 		}
 		items = append(items, i)
 	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
@@ -124,28 +121,28 @@ func (q *Queries) ListPokemons(ctx context.Context) ([]Pokemon, error) {
 
 const updatePokemon = `-- name: UpdatePokemon :one
 UPDATE pokemons SET
-name = ?, description = ?, category = ?, types = ?, abilities = ?
-WHERE id = ?
+name = $2, description = $3, category = $4, types = $5, abilities = $6
+WHERE id = $1
 RETURNING id, name, description, category, types, abilities
 `
 
 type UpdatePokemonParams struct {
+	ID          int32
 	Name        string
 	Description string
 	Category    string
-	Types       string
-	Abilities   string
-	ID          int64
+	Types       []byte
+	Abilities   []byte
 }
 
 func (q *Queries) UpdatePokemon(ctx context.Context, arg UpdatePokemonParams) (Pokemon, error) {
-	row := q.db.QueryRowContext(ctx, updatePokemon,
+	row := q.db.QueryRow(ctx, updatePokemon,
+		arg.ID,
 		arg.Name,
 		arg.Description,
 		arg.Category,
 		arg.Types,
 		arg.Abilities,
-		arg.ID,
 	)
 	var i Pokemon
 	err := row.Scan(

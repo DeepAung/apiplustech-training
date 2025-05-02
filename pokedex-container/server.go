@@ -1,9 +1,11 @@
 package main
 
 import (
-	"database/sql"
+	"context"
+	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/handler/extension"
@@ -13,18 +15,25 @@ import (
 	"github.com/DeepAung/apiplustech-training/pokedex/database"
 	"github.com/DeepAung/apiplustech-training/pokedex/graph"
 	"github.com/go-chi/chi/v5"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
 	"github.com/vektah/gqlparser/v2/ast"
 )
 
-const port = "8080"
+var envPath = flag.String("env-file", "", "environment file path")
 
 func main() {
-	db, err := sql.Open("sqlite3", "pokedex.db")
+	flag.Parse()
+	cfg := loadConfig(*envPath)
+
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, cfg.dbUrl)
 	if err != nil {
 		panic(err)
 	}
-	queries := database.New(db)
+	defer conn.Close(ctx)
+
+	queries := database.New(conn)
 	resolver := graph.NewResolver(queries)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
@@ -44,6 +53,24 @@ func main() {
 	r.Handle("/", playground.ApolloSandboxHandler("GraphQL playground", "/query"))
 	r.Handle("/query", srv)
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, r))
+	log.Printf("connect to http://localhost:%s/ for GraphQL playground", cfg.appPort)
+	if err := http.ListenAndServe(":"+cfg.appPort, r); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type config struct {
+	dbUrl   string
+	appPort string
+}
+
+func loadConfig(filePath string) config {
+	if filePath != "" {
+		_ = godotenv.Load(filePath)
+	}
+
+	return config{
+		dbUrl:   os.Getenv("DB_URL"),
+		appPort: os.Getenv("APP_PORT"),
+	}
 }
