@@ -1,0 +1,4 @@
+tmp/
+.gitignore
+.env.dev
+.air.toml
