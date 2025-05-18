@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -103,22 +104,13 @@ func runCommandWithMethod(method string) func(cmd *cobra.Command, args []string)
 	}
 }
 
-func parseArguments(args []string) (url string, err error) {
-	switch len(args) {
-	case 0:
-		err = errors.New("requires exact one argument <url>")
-		return
-	case 1:
-		url = args[0]
-		return
-	default:
-		err = errors.New("requires exact one arguments <url>")
-		return
-	}
-}
-
 func constructHttpRequest(method, url, jsonBody string) (*http.Request, error) {
 	if method == http.MethodPost {
+
+		if !json.Valid([]byte(jsonBody)) {
+			return nil, errors.New("invalid json body")
+		}
+
 		reqBody := bytes.NewBufferString(jsonBody)
 		return http.NewRequest(method, url, reqBody)
 	}
