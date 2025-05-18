@@ -5,8 +5,6 @@ db.create:
 	docker create --name pokedex-postgresql --env-file=.env.dev -p 5432:5432 bitnami/postgresql:latest
 db.start:
 	docker start -i pokedex-postgresql
-db.generate:
-	sqlc generate
 db.migrate:
 	docker cp ./database/schema.sql pokedex-postgresql:/docker-entrypoint-initdb.d/schema.sql
 	docker exec -i pokedex-postgresql psql -U myuser -d mydb -f /docker-entrypoint-initdb.d/schema.sql

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"net/http"
@@ -15,7 +14,6 @@ import (
 	"github.com/DeepAung/apiplustech-training/pokedex/database"
 	"github.com/DeepAung/apiplustech-training/pokedex/graph"
 	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 	"github.com/vektah/gqlparser/v2/ast"
 )
@@ -26,15 +24,8 @@ func main() {
 	flag.Parse()
 	cfg := loadConfig(*envPath)
 
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, cfg.dbUrl)
-	if err != nil {
-		panic(err)
-	}
-	defer conn.Close(ctx)
-
-	queries := database.New(conn)
-	resolver := graph.NewResolver(queries)
+	db := database.InitDB(cfg.dbUrl)
+	resolver := graph.NewResolver(db)
 
 	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
 

@@ -1028,9 +1028,9 @@ func (ec *executionContext) _Pokemon_abilities(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]string)
+	res := resTmp.([]model.PokemonAbility)
 	fc.Result = res
-	return ec.marshalNString2ᚕstringᚄ(ctx, field.Selections, res)
+	return ec.marshalNPokemonAbility2ᚕgithubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbilityᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Pokemon_abilities(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -1040,7 +1040,7 @@ func (ec *executionContext) fieldContext_Pokemon_abilities(_ context.Context, fi
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type PokemonAbility does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3368,7 +3368,7 @@ func (ec *executionContext) unmarshalInputPokemonInput(ctx context.Context, obj 
 			it.Types = data
 		case "abilities":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("abilities"))
-			data, err := ec.unmarshalNString2ᚕstringᚄ(ctx, v)
+			data, err := ec.unmarshalNPokemonAbility2ᚕgithubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbilityᚄ(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4053,6 +4053,75 @@ func (ec *executionContext) marshalNPokemon2ᚖgithubᚗcomᚋDeepAungᚋapiplus
 	return ec._Pokemon(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalNPokemonAbility2githubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbility(ctx context.Context, v any) (model.PokemonAbility, error) {
+	var res model.PokemonAbility
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPokemonAbility2githubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbility(ctx context.Context, sel ast.SelectionSet, v model.PokemonAbility) graphql.Marshaler {
+	return v
+}
+
+func (ec *executionContext) unmarshalNPokemonAbility2ᚕgithubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbilityᚄ(ctx context.Context, v any) ([]model.PokemonAbility, error) {
+	var vSlice []any
+	vSlice = graphql.CoerceList(v)
+	var err error
+	res := make([]model.PokemonAbility, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNPokemonAbility2githubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbility(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNPokemonAbility2ᚕgithubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbilityᚄ(ctx context.Context, sel ast.SelectionSet, v []model.PokemonAbility) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPokemonAbility2githubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonAbility(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalNPokemonInput2githubᚗcomᚋDeepAungᚋapiplustechᚑtrainingᚋpokedexᚋgraphᚋmodelᚐPokemonInput(ctx context.Context, v any) (model.PokemonInput, error) {
 	res, err := ec.unmarshalInputPokemonInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4140,36 +4209,6 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 		}
 	}
 	return res
-}
-
-func (ec *executionContext) unmarshalNString2ᚕstringᚄ(ctx context.Context, v any) ([]string, error) {
-	var vSlice []any
-	vSlice = graphql.CoerceList(v)
-	var err error
-	res := make([]string, len(vSlice))
-	for i := range vSlice {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalNString2string(ctx, vSlice[i])
-		if err != nil {
-			return nil, err
-		}
-	}
-	return res, nil
-}
-
-func (ec *executionContext) marshalNString2ᚕstringᚄ(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	for i := range v {
-		ret[i] = ec.marshalNString2string(ctx, sel, v[i])
-	}
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

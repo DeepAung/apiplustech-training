@@ -4,12 +4,12 @@ package graph
 
 import (
 	"context"
-	"encoding/json"
+	"database/sql"
 	"errors"
-	"fmt"
 
 	"github.com/DeepAung/apiplustech-training/pokedex/database"
 	"github.com/DeepAung/apiplustech-training/pokedex/graph/model"
+	"github.com/uptrace/bun"
 )
 
 // This file will not be regenerated automatically.
@@ -17,10 +17,11 @@ import (
 // It serves as dependency injection for your app, add any dependencies you require here.
 
 var (
-	InvalidIntError       = errors.New("invalid integer")
-	InvalidJsonFieldError = func(field string) error {
-		return errors.New(fmt.Sprintf("invalid json field %q", field))
-	}
+	InvalidIntError             = errors.New("invalid integer")
+	NotUniqueTypeOrAbilityError = errors.New("not unique type or ability")
+	UniqueNameError             = errors.New("name already exists")
+	IdNotFoundError             = errors.New("pokemon id not found")
+	NameNotFoundError           = errors.New("pokemon name not found")
 )
 
 type Resolver struct {
@@ -28,13 +29,13 @@ type Resolver struct {
 }
 
 type Repository struct {
-	queries *database.Queries
+	db *bun.DB
 }
 
-func NewResolver(queries *database.Queries) *Resolver {
+func NewResolver(db *bun.DB) *Resolver {
 	return &Resolver{
 		repo: &Repository{
-			queries: queries,
+			db: db,
 		},
 	}
 }
@@ -43,28 +44,20 @@ func (r *Repository) CreatePokemon(
 	ctx context.Context,
 	input model.PokemonInput,
 ) (*model.Pokemon, error) {
-	types, err := json.Marshal(&input.Types)
-	if err != nil {
-		return nil, InvalidJsonFieldError("types")
-	}
+	var result database.Pokemon
+	model := database.PokemonInputToDbModel(&input)
 
-	abilities, err := json.Marshal(&input.Abilities)
-	if err != nil {
-		return nil, InvalidJsonFieldError("abilities")
-	}
-
-	result, err := r.queries.CreatePokemon(ctx, database.CreatePokemonParams{
-		Name:        input.Name,
-		Description: input.Description,
-		Category:    input.Category,
-		Types:       types,
-		Abilities:   abilities,
-	})
-	if err != nil {
+	if err := r.db.NewInsert().Model(model).Returning("*").Scan(ctx, &result); err != nil {
+		if err.Error() == "ERROR: new row for relation \"pokemons\" violates check constraint \"pokemons_check\" (SQLSTATE=23514)" {
+			return nil, NotUniqueTypeOrAbilityError
+		}
+		if err.Error() == "ERROR: duplicate key value violates unique constraint \"pokemons_name_key\" (SQLSTATE=23505)" {
+			return nil, UniqueNameError
+		}
 		return nil, err
 	}
 
-	return r.convertPokemonDBToGraphql(&result)
+	return result.ToGraphql(), nil
 }
 
 func (r *Repository) UpdatePokemon(
@@ -72,90 +65,75 @@ func (r *Repository) UpdatePokemon(
 	id int32,
 	input model.PokemonInput,
 ) (*model.Pokemon, error) {
-	types, err := json.Marshal(&input.Types)
-	if err != nil {
-		return nil, InvalidJsonFieldError("types")
-	}
+	var result database.Pokemon
+	model := database.PokemonInputToDbModel(&input)
 
-	abilities, err := json.Marshal(&input.Abilities)
-	if err != nil {
-		return nil, InvalidJsonFieldError("abilities")
-	}
-
-	result, err := r.queries.UpdatePokemon(ctx, database.UpdatePokemonParams{
-		Name:        input.Name,
-		Description: input.Description,
-		Category:    input.Category,
-		Types:       types,
-		Abilities:   abilities,
-		ID:          id,
-	})
-	if err != nil {
+	if err := r.db.NewUpdate().Model(model).Where("id = ?", id).Returning("*").Scan(ctx, &result); err != nil {
 		return nil, err
 	}
 
-	return r.convertPokemonDBToGraphql(&result)
+	return result.ToGraphql(), nil
 }
 
 func (r *Repository) DeletePokemon(ctx context.Context, id int32) (bool, error) {
-	err := r.queries.DeletePokemon(ctx, id)
-	return err == nil, err
+	result, err := r.db.NewDelete().Model((*database.Pokemon)(nil)).Where("id = ?", id).Exec(ctx)
+	if err != nil {
+		return false, err
+	}
+	n, err := result.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	if n == 0 {
+		return false, IdNotFoundError
+	}
+	return true, nil
 }
 
 func (r *Repository) ListPokemons(ctx context.Context) ([]*model.Pokemon, error) {
-	result, err := r.queries.ListPokemons(ctx)
+	var result []database.Pokemon
+	err := r.db.NewSelect().Model((*database.Pokemon)(nil)).Scan(ctx, &result)
 	if err != nil {
 		return nil, err
 	}
 
 	pokemons := make([]*model.Pokemon, len(result))
-	for i, item := range result {
-		pokemons[i], err = r.convertPokemonDBToGraphql(&item)
-		if err != nil {
-			return nil, err
-		}
+	for i := range len(result) {
+		pokemons[i] = result[i].ToGraphql()
 	}
-
 	return pokemons, nil
 }
 
 func (r *Repository) GetPokemonByID(ctx context.Context, id int32) (*model.Pokemon, error) {
-	result, err := r.queries.GetPokemonByID(ctx, id)
+	var result database.Pokemon
+	err := r.db.NewSelect().
+		Model((*database.Pokemon)(nil)).
+		Where("id = ?", id).
+		Limit(1).
+		Scan(ctx, &result)
 	if err != nil {
+		if err.Error() == sql.ErrNoRows.Error() {
+			return nil, IdNotFoundError
+		}
 		return nil, err
 	}
 
-	return r.convertPokemonDBToGraphql(&result)
+	return result.ToGraphql(), nil
 }
 
 func (r *Repository) GetPokemonByName(ctx context.Context, name string) (*model.Pokemon, error) {
-	result, err := r.queries.GetPokemonByName(ctx, name)
+	var result database.Pokemon
+	err := r.db.NewSelect().
+		Model((*database.Pokemon)(nil)).
+		Where("name = ?", name).
+		Limit(1).
+		Scan(ctx, &result)
 	if err != nil {
+		if err.Error() == sql.ErrNoRows.Error() {
+			return nil, NameNotFoundError
+		}
 		return nil, err
 	}
 
-	return r.convertPokemonDBToGraphql(&result)
-}
-
-// -------------------------------------------------------------------------- //
-
-func (r *Repository) convertPokemonDBToGraphql(pokemon *database.Pokemon) (*model.Pokemon, error) {
-	var types []model.PokemonType
-	if err := json.Unmarshal([]byte(pokemon.Types), &types); err != nil {
-		return nil, InvalidJsonFieldError("types")
-	}
-
-	var abilities []string
-	if err := json.Unmarshal([]byte(pokemon.Abilities), &abilities); err != nil {
-		return nil, InvalidJsonFieldError("abilities")
-	}
-
-	return &model.Pokemon{
-		ID:          fmt.Sprint(pokemon.ID),
-		Name:        pokemon.Name,
-		Description: pokemon.Description,
-		Category:    pokemon.Category,
-		Types:       types,
-		Abilities:   abilities,
-	}, nil
+	return result.ToGraphql(), nil
 }
